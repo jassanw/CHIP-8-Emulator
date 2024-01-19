@@ -16,8 +16,7 @@
 #define NUM_OF_KEYS 16
 #define V_REGISTER_SIZE 16
 #define FONTSET_SIZE = 80;
-#define X_MASK = 0x0F00;
-#define Y_MASK = 0X00F0;
+#define FONTSET_START_ADDRESS  0x50;
 
 // Chip-8 Font Set
 unsigned char fontset[80] = {
@@ -66,6 +65,8 @@ typedef struct chip8
     unsigned char V[V_REGISTER_SIZE];                //16 8-bit general purpose registers (denoted Vx where x is hex value)
 
     unsigned char keyboard[NUM_OF_KEYS];
+
+    unsigned char drawflag;
 } chip8;
 
 
