@@ -11,34 +11,19 @@ void init_cpu(chip8 *chip8)
     srand(time(NULL));
     
     // clear ram
-    for (int i = 0; i < MEMORY_SIZE; i++)
-    {
-        chip8->memory[i] = 0;
-    }
+    memset(chip8->memory, 0 , MEMORY_SIZE);
 
     // clear display memory
-    for (int i = 0; i < DISPLAY_HEIGHT * DISPLAY_WIDTH; i++)
-    {
-        chip8->display[i] = 0;
-    }
+    memset(chip8->display, 0 , DISPLAY_HEIGHT * DISPLAY_WIDTH);
 
     // clear stack
-    for (int i = 0; i < STACK_SIZE; i++)
-    {
-        chip8->stack[i] = 0;
-    }
-
+    memset(chip8->stack, 0 , STACK_SIZE);
+    
     // clear general purpose registers
-    for (int i = 0; i < V_REGISTER_SIZE; i++)
-    {
-        chip8->V[i] = 0;
-    }
+    memset(chip8->V, 0 , V_REGISTER_SIZE);
 
     // clear input
-    for (int i = 0; i < NUM_OF_KEYS; i++)
-    {
-        chip8->keyboard[i] = 0;
-    }
+    memset(chip8->keyboard, 0 , NUM_OF_KEYS);
 
     // Set Program Counter To 0x200 which is start of program
     chip8->pc = PC_START;
