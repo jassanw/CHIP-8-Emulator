@@ -11,15 +11,16 @@
 #define DISPLAY_HEIGHT 32
 #define DISPLAY_WIDTH 64
 #define PC_START 0x200
+#define PC_END 0xFFF
 #define MEMORY_SIZE 4096
 #define STACK_SIZE 16
 #define NUM_OF_KEYS 16
 #define V_REGISTER_SIZE 16
-#define FONTSET_SIZE = 80;
-#define FONTSET_START_ADDRESS  0x50;
+#define FONTSET_SIZE 80
+#define FONTSET_START_ADDRESS 0x50
 
 // Chip-8 Font Set
-unsigned char fontset[80] = {
+const static unsigned char fontset[FONTSET_SIZE] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -39,7 +40,7 @@ unsigned char fontset[80] = {
 };
 
 // Key Map
-SDL_Scancode kepmap[16] = {
+const static SDL_Scancode kepmap[NUM_OF_KEYS] = {
     SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
     SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R,
     SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_F,
@@ -70,10 +71,12 @@ typedef struct chip8
 } chip8;
 
 
-void init_cpu(chip8* cpu);
+void initcpu(chip8* chip8);
 
-void cpu_cycle(chip8* cpu);
+void cpucycle(chip8* chip8);
 
-void clear_display(chip8* cpu); 
+void cleardisplay(chip8* chip8); 
+
+void loadprogram(chip8* chip8, unsigned char* buffer, size_t bufferSize);
 
 #endif

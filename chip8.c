@@ -6,7 +6,10 @@
 
 #include "chip8.h"
 
-void init_cpu(chip8 *chip8)
+#include <time.h>
+#include <stdlib.h>
+
+void initcpu(chip8 *chip8)
 {
     srand(time(NULL));
     
@@ -38,15 +41,15 @@ void init_cpu(chip8 *chip8)
     chip8->drawflag = 0;
 
     // load font into memory in address range (0x50-0x9F)
-    for (int i = 0x50; i <= 0x9F; i++)
+    for (int i = FONTSET_START_ADDRESS; i <= 0x9F; i++)
     {
         chip8->memory[i] = fontset[i - 0x50];
     }
 }
 
-void cpu_cycle(chip8 *chip8)
+void cpucycle(chip8 *chip8)
 {
-
+    chip8->drawflag = 0;
     unsigned short opcode = (chip8->memory[chip8->pc] << 8) | chip8->memory[chip8->pc + 1];
 
     // Increment program counter
@@ -60,7 +63,7 @@ void cpu_cycle(chip8 *chip8)
 
     unsigned short n = (opcode & 0x000F);
 
-    unsigned short nn = (opcode & 0x0FF0) >> 4;
+    unsigned short nn = (opcode & 0x00FF);
 
     unsigned short nnn = (opcode & 0x0FFF);
 
@@ -71,7 +74,7 @@ void cpu_cycle(chip8 *chip8)
         {
         // 00E0: clear display
         case 0x00E0:
-            clear_display(chip8);
+            cleardisplay(chip8);
             break;
 
         // 00EE: Returning from a subroutine
@@ -93,7 +96,7 @@ void cpu_cycle(chip8 *chip8)
 
     // 2NNN: calls the subroutine at memory location NNN
     case 0x2000:
-        chip8->stackpointer++;
+        chip8->stackpointer += 1;
         chip8->stack[chip8->stackpointer] = chip8->pc;
         chip8->pc = nnn;
         break;
@@ -144,49 +147,50 @@ void cpu_cycle(chip8 *chip8)
 
         // 8XY1: Binary OR
         case 0x0001:
-            chip8->V[x] = chip8->V[x] | chip8->V[y];
+            chip8->V[x] = (chip8->V[x] | chip8->V[y]);
             break;
 
         // 8XY2: Binary AND
         case 0x0002:
-            chip8->V[x] = chip8->V[x] & chip8->V[y];
+            chip8->V[x] = (chip8->V[x] & chip8->V[y]);
             break;
 
         // 8XY3: Logical XOR
         case 0x0003:
-            chip8->V[x] = chip8->V[x] ^ chip8->V[y];
+            chip8->V[x] = (chip8->V[x] ^ chip8->V[y]);
             break;
 
         // 8XY4: Add
         case 0x0004:
-            chip8->V[x] = chip8->V[x] + chip8->V[y];
             chip8->V[0xF] = (chip8->V[x] + chip8->V[y]) > 0xFF ? 1 : 0;
+            chip8->V[x] = chip8->V[x] + chip8->V[y];
             break;
 
         // 8XY5: Subtract
         case 0x0005:
+            chip8->V[0xF] = (chip8->V[x] > chip8->V[y]) ? 1 : 0;
             chip8->V[x] = chip8->V[x] - chip8->V[y];
-            chip8->V[0xF] = (chip8->V[x] > chip8->V[y]) > 1 ? 1 : 0;
             break;
 
         // 8XY6: Shift
         case 0x0006:
-            chip8->V[x] = chip8->V[y] >> 1;
-            chip8->V[0x0F] = chip8->V[y] & 0x1;
+            chip8->V[0xF] = chip8->V[x] & 0x1;
+            chip8->V[x] = (chip8->V[x] >> 1);
             break;
 
         // 8XY7: Subtract
         case 0x0007:
+            chip8->V[0xF] = (chip8->V[y] > chip8->V[x]) ? 1 : 0;
             chip8->V[x] = chip8->V[y] - chip8->V[x];
-            chip8->V[0xF] = (chip8->V[y] > chip8->V[x]) > 1 ? 1 : 0;
             break;
 
         // 8XYE: Shift
         case 0x000E:
-            chip8->V[x] = chip8->V[y] << 1;
-            chip8->V[0x0F] = chip8->V[y] & 0xF0;
+            chip8->V[0xF] = (chip8->V[x] >> 7) & 0x1;
+            chip8->V[x] = chip8->V[x] << 1;
             break;
         }
+    break;
 
     // 9XY0: skip instruction
     case 0x9000:
@@ -203,41 +207,40 @@ void cpu_cycle(chip8 *chip8)
 
     // BNNN: Jump with offset
     case 0xB000:
-        chip8->pc = nnn + chip8->V[0x0];
+        chip8->pc = nnn + chip8->V[0];
+        break;
 
     // CXNN: Random
     case 0xC000:
         chip8->V[x] = (rand() % 256) & nn;
+        break;
 
     case 0xD000:
-        unsigned char xcord = chip8->V[x] % DISPLAY_WIDTH;
-        unsigned char ycord = chip8->V[y] % DISPLAY_HEIGHT;
+        chip8->drawflag = 1;
 
         chip8->V[0xF] = 0;
 
+        unsigned char ycord = chip8->V[y] % DISPLAY_HEIGHT;
         for (int row = 0; row < n; row++)
         {
-            unsigned char pixel = chip8->memory[chip8->I + row];
+            unsigned char xcord = chip8->V[x] % DISPLAY_WIDTH;
+            unsigned short pixel = chip8->memory[chip8->I + row];
+    
             for (int col = 0; col < 8; col++)
             {
-
-                if (pixel & (0x80 >> col) != 0)
+                if ((pixel & (0x80 >> col)) != 0)
                 {
-
-                    if (chip8->display[xcord + (ycord * 64)] != 0)
+                    if (chip8->display[xcord + (ycord * DISPLAY_WIDTH)] == 1)
                     {
                         chip8->V[0xF] = 1;
                     }
 
-                    chip8->display[xcord + (ycord * 64)] ^= 1;
+                    chip8->display[xcord  + (ycord * DISPLAY_WIDTH)] ^= 1;
                 }
-                xcord++;
+                xcord+=1;
             }
-            ycord++;
+            ycord+=1;
         }
-
-        chip8->drawflag = 1;
-
         break;
 
     case 0XE000:
@@ -280,6 +283,7 @@ void cpu_cycle(chip8 *chip8)
             {
                 chip8->V[0xF] = 1;
             }
+            break;
 
         case 0x000A:
             unsigned char waskeypressed = 0;
@@ -305,9 +309,9 @@ void cpu_cycle(chip8 *chip8)
             break;
 
         case 0x0033:
-            chip8->memory[chip8->I] = chip8->V[x] / 100;
+            chip8->memory[chip8->I] = (chip8->V[x] % 1000) / 100;
             chip8->memory[chip8->I + 1] = (chip8->V[x] % 100) / 10;
-            chip8->memory[chip8->I + 1] = chip8->V[x] % 10;
+            chip8->memory[chip8->I + 2] = chip8->V[x] % 10;
             break;
 
         case 0x0055:
@@ -324,21 +328,28 @@ void cpu_cycle(chip8 *chip8)
             }
             break;
         }
+        break;
     }
 
     if(chip8->delaytimer > 0) {
-        chip8->delaytimer--;
+        chip8->delaytimer -= 1;
     }
 
     if(chip8->soundtimer > 0){
-        chip8->soundtimer--;
+        chip8->soundtimer -= 1;
     }
 }
 
-void clear_display(chip8 *chip8)
+void cleardisplay(chip8 *chip8)
 {
     for (int i = 0; i < DISPLAY_HEIGHT * DISPLAY_WIDTH; i++)
     {
         chip8->display[i] = 0;
+    }
+}
+
+void loadprogram(chip8* chip8, unsigned char* buffer, size_t bufferSize) {
+    for(int i = 0; i < bufferSize; i++) {
+        chip8->memory[0x200 + i] = buffer[i];
     }
 }
